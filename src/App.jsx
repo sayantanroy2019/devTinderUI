@@ -1,22 +1,20 @@
-import Body from './Body';
+import Body from './components/Body';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Login from './components/Login';
+import { Provider } from 'react-redux';
+import appStore from './utils/appStore';
 
 function App() {
- 
-
   return (
-    <BrowserRouter basename='/'>
-      <Routes>
-        <Route path='/' element={<Body />} />
-         
-
-      </Routes>
-
-    </BrowserRouter>
-
-
-  )
-      
+    <Provider store={appStore}>
+      <BrowserRouter basename='/'>
+        <Routes>
+          <Route path='/' element={<Body />} />
+          <Route path='/login' element={<Login />} />
+        </Routes>
+      </BrowserRouter>
+    </Provider>
+  );
 }
 
 export default App;

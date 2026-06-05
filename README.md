@@ -112,3 +112,221 @@ function Body() {
 
 export default Body;
 ```
+
+---
+
+## CORS (Cross-Origin Resource Sharing)
+
+### What is CORS?
+When a browser makes a request from one domain to a **different** domain, the browser blocks it by default. This is called a **CORS error**.
+
+- Same domain → browser allows it (no CORS error)
+  - `abc.com` → `abc.com` ✅
+- Different domain → browser blocks it (CORS error)
+  - `abc.com` → `xyz.com` ❌
+
+This happens in our app because the React frontend (e.g. `localhost:5173`) makes API calls to the backend (e.g. `localhost:8080`) — different ports = different origins.
+
+### Fix — install cors in the backend
+```bash
+npm install cors
+```
+
+### Usage in Express (backend)
+```js
+const cors = require('cors');
+const express = require('express');
+
+const app = express();
+
+// Add cors as the FIRST middleware, above all others
+app.use(cors());
+
+// rest of your middlewares and routes below...
+app.use(express.json());
+```
+
+**Important:** `cors()` must be added as the **first middleware** so it runs before any route handlers and properly sets the response headers on every request.
+
+### Sending cookies across origins (credentials)
+
+By default, browsers do **not** send cookies with cross-origin requests. To store and read tokens in browser cookies, two things must be done:
+
+**Backend — whitelist the frontend origin and allow credentials:**
+```js
+app.use(cors({
+  origin: 'http://localhost:5173',  // your frontend URL (whitelist it)
+  credentials: true,                // allow cookies to be sent/received
+}));
+```
+
+**Frontend — tell axios to include credentials with every request:**
+```js
+// on a single request
+axios.post(url, data, { withCredentials: true });
+
+// or globally for all axios requests
+axios.defaults.withCredentials = true;
+```
+
+Without `credentials: true` on the backend and `withCredentials: true` on the frontend, the browser will block the cookie and you won't see the token under Application → Cookies in DevTools.
+
+---
+
+## Redux Toolkit
+
+### What is Redux?
+Redux is a global state management library. Instead of passing data through props across many components, you store shared data in a central **store** and any component can read from or write to it.
+
+### Install
+```bash
+npm install @reduxjs/toolkit react-redux
+```
+
+### Core concepts
+
+- **Store** — the single central place where all app state lives
+- **Slice** — a piece of the store responsible for one domain (e.g. user, feed, connections). Each slice has its own state and reducers.
+- **Reducer** — a function inside a slice that defines how state changes
+- **Provider** — a React component that wraps the app and makes the store available to all components
+
+### File structure
+```
+src/
+  utils/
+    appStore.js      ← creates the store
+    userSlice.js     ← slice for logged-in user data
+```
+
+### Create a slice (userSlice.js)
+```js
+import { createSlice } from '@reduxjs/toolkit';
+
+const userSlice = createSlice({
+  name: 'user',
+  initialState: null,
+  reducers: {
+    addUser: (state, action) => action.payload,
+    removeUser: () => null,
+  },
+});
+
+export const { addUser, removeUser } = userSlice.actions;
+export default userSlice.reducer;
+```
+
+### Create the store (appStore.js)
+```js
+import { configureStore } from '@reduxjs/toolkit';
+import userReducer from './userSlice';
+
+const appStore = configureStore({
+  reducer: {
+    user: userReducer,
+    // add more slices here as the app grows
+  },
+});
+
+export default appStore;
+```
+
+### Provide the store to the app (App.jsx)
+```jsx
+import { Provider } from 'react-redux';
+import appStore from './utils/appStore';
+
+function App() {
+  return (
+    <Provider store={appStore}>
+      <BrowserRouter basename="/">
+        ...
+      </BrowserRouter>
+    </Provider>
+  );
+}
+```
+
+The `Provider` must wrap everything so that all components inside can access the store.
+
+### Using the store in a component
+```js
+import { useDispatch, useSelector } from 'react-redux';
+import { addUser } from './utils/userSlice';
+
+// read from store
+const user = useSelector((store) => store.user);
+
+// write to store
+const dispatch = useDispatch();
+dispatch(addUser(userData));
+```
+
+### After login — store the user data
+```js
+const response = await axios.post('/auth/login', { email, password });
+dispatch(addUser(response.data));  // saves user into Redux store
+```
+
+---
+
+## Persisting Login on Refresh
+
+### The problem
+Redux store lives in memory. On every page refresh it resets to `null`. Even though the auth token is still in the browser cookie, the store doesn't know about it — so the user appears logged out.
+
+### The fix — fetch user on Body mount
+`Body` is the parent layout that wraps all protected routes. When `Body` mounts (i.e. on every page load/refresh), we call the `/profile` API. The browser automatically sends the cookie with this request. If the token is valid, the backend returns the user and we store it in Redux. If not (token missing or expired), we redirect to `/login`.
+
+This also acts as a **route guard** — no route inside Body is accessible without a valid token.
+
+### Implementation in Body.jsx
+```jsx
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { addUser } from '../utils/userSlice';
+import { BASE_URL } from '../utils/constants';
+
+const Body = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const userData = useSelector((store) => store.user);
+
+  const fetchUser = async () => {
+    if (userData) return; // already in store, no need to re-fetch
+
+    try {
+      const res = await axios.get(BASE_URL + '/profile/view', { withCredentials: true });
+      dispatch(addUser(res.data));
+    } catch (err) {
+      // token missing or invalid — send to login
+      navigate('/login');
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  return (
+    <>
+      <NavBar />
+      <Outlet />
+      <Footer />
+    </>
+  );
+};
+```
+
+### How it works step by step
+1. User logs in → token saved in browser cookie → user saved in Redux
+2. User refreshes → Redux resets to `null`
+3. `Body` mounts → `fetchUser` runs
+4. Browser sends cookie automatically with the `/profile/view` request
+5. Backend validates token → returns user data
+6. User saved back into Redux → app works as if never refreshed
+7. If token is missing/expired → redirected to `/login`
+
+### Why check `if (userData) return`?
+Avoids making a redundant API call when navigating between pages (Body re-mounts but Redux already has the user from the current session).
