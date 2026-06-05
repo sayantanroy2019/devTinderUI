@@ -330,3 +330,102 @@ const Body = () => {
 
 ### Why check `if (userData) return`?
 Avoids making a redundant API call when navigating between pages (Body re-mounts but Redux already has the user from the current session).
+
+---
+
+## Logout Feature
+
+### Why logout is more than just navigation
+
+If you only navigate to `/login` without logging out properly, the user data stays in the Redux store. If the user somehow goes back (browser back button, etc.), they'd still appear logged in even though the server invalidated their token. This creates a security issue.
+
+### The three-step logout process
+
+**Step 1: Call the logout API**
+- Make a POST request to `/auth/logout` (or your backend's logout endpoint)
+- The backend invalidates the token (usually by blacklisting it or clearing the session)
+- Browser automatically sends the token cookie with this request (`withCredentials: true`)
+- The server responds: token is now invalid on the backend side
+
+**Step 2: Remove user from Redux store**
+- Dispatch `removeUser()` action from the userSlice
+- This clears the Redux store (`user: null`)
+- Now the frontend knows there's no user either
+- Prevents stale user data from persisting in memory
+
+**Step 3: Navigate to login page**
+- After removing the user from Redux, redirect to `/login`
+- User sees the login page immediately
+- If they try to visit a protected route, Body's `fetchUser` will fail (no token) and redirect again
+
+### Why this order matters
+
+1. **API first** — ensures backend-side logout (token invalidated)
+2. **Redux clear second** — ensures frontend-side logout (store cleared)
+3. **Navigation last** — ensures user sees login page with everything reset
+
+If you skip any step:
+- Skip API call → token still valid on backend, security risk
+- Skip Redux clear → user data lingers in memory, may reappear
+- Skip navigation → user still sees protected content (confusing)
+
+All three must happen in order for a clean logout.
+
+---
+
+## Error Handling in Login Form
+
+### The problem
+When login fails, the error message is static (hardcoded). But different errors need different messages:
+- Wrong password → "Invalid credentials"
+- User not found → "Email not registered"
+- Server error → "Something went wrong, try again later"
+- Network error → "No internet connection"
+
+### Solution — use `useState` for dynamic error messages
+
+**Create a state variable to hold the error message:**
+```jsx
+const [error, setError] = useState('');
+```
+
+**Catch the error and update state:**
+```jsx
+try {
+  const response = await axios.post(loginUrl, { email, password });
+  dispatch(addUser(response.data));
+  navigate('/');
+} catch (err) {
+  // Get the error message from the backend response
+  const errorMsg = err.response?.data?.message || err.message;
+  setError(errorMsg); // update state with dynamic message
+}
+```
+
+**Display the error in the UI:**
+```jsx
+{error && <p className="text-red-500 text-sm">{error}</p>}
+```
+
+### How it works
+
+1. User submits login form
+2. If login succeeds → navigate away (error stays empty, not displayed)
+3. If login fails → backend returns error message → `setError()` updates state → error displays below password field
+4. User sees the specific error and can retry
+
+### Where the error message comes from
+
+The backend sends it in the response:
+```json
+{
+  "message": "Email not registered"
+}
+```
+
+Frontend catches this with `err.response?.data?.message` and stores it in state.
+
+### Optional chaining (`?.`)
+- `err.response?.data?.message` — safely access nested data
+- If `response` doesn't exist, it returns `undefined` instead of crashing
+- Fallback to `err.message` (generic error) if nested message doesn't exist

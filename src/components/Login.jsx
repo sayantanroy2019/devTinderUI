@@ -21,7 +21,7 @@ const Login = () => {
         dispatch(addUser(response.data));
         navigate('/');
     }catch(err){
-        setError(err.response?.data?.message || err.message);
+        setError(err.response?.data || err.message);
     }
   }
 
