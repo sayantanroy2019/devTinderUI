@@ -1,0 +1,32 @@
+
+
+const UserCard = ({user}) => {
+    if (!user) return <div className="p-4">Loading...</div>;
+
+    const { firstName, lastName, photoUrl, age, gender, about } = user;
+
+  return (
+    <div className="card bg-white w-96 shadow-lg">
+  <figure className="bg-gradient-to-b from-blue-400 to-blue-600 h-72 flex items-center justify-center">
+    {photoUrl ? (
+      <img
+        src={photoUrl}
+        alt="Photo"
+        className="w-full h-full object-cover" />
+    ) : (
+      <div className="text-white text-6xl">👤</div>
+    )}
+  </figure>
+  <div className="card-body">
+    <h2 className="card-title text-gray-800">{firstName + " " + lastName}</h2>
+    <p className="text-gray-600">{age} {gender} • {about}</p>
+    <div className="card-actions justify-end">
+      <button className="btn btn-primary">Interested</button>
+      <button className="btn btn-primary">Ignored</button>
+    </div>
+  </div>
+</div>
+  )
+}
+
+export default UserCard;
