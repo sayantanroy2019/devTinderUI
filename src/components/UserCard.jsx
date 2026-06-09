@@ -1,5 +1,5 @@
 
-const UserCard = ({user, type = "feed", onAccept, onReject}) => {
+const UserCard = ({user, type = "feed", onAccept, onReject, onInterested, onIgnored}) => {
     if (!user) return <div className="p-4">Loading...</div>;
 
     const { firstName, lastName, photoUrl, age, gender, about } = user;
@@ -28,8 +28,8 @@ const UserCard = ({user, type = "feed", onAccept, onReject}) => {
     }
     return (
       <>
-        <button className="btn btn-primary">Interested</button>
-        <button className="btn btn-primary">Ignored</button>
+        <button className="btn btn-primary" onClick={onInterested}>Interested</button>
+        <button className="btn btn-primary" onClick={onIgnored}>Ignored</button>
       </>
     );
   };
