@@ -34,7 +34,7 @@ const Connections = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {connections.map((user) => (
             <div key={user._id}>
-              <UserCard user={user} />
+              <UserCard user={user} type="connection" />
             </div>
           ))}
         </div>

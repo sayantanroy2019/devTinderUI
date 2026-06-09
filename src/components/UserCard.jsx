@@ -1,9 +1,28 @@
 
-
-const UserCard = ({user}) => {
+const UserCard = ({user, type = "feed"}) => {
     if (!user) return <div className="p-4">Loading...</div>;
 
     const { firstName, lastName, photoUrl, age, gender, about } = user;
+
+  const renderButtons = () => {
+    if (type === "request") {
+      return (
+        <>
+          <button className="btn btn-success">Accepted</button>
+          <button className="btn btn-error">Rejected</button>
+        </>
+      );
+    }
+    if (type === "connection") {
+      return null;
+    }
+    return (
+      <>
+        <button className="btn btn-primary">Interested</button>
+        <button className="btn btn-primary">Ignored</button>
+      </>
+    );
+  };
 
   return (
     <div className="card bg-white w-96 shadow-lg">
@@ -21,8 +40,7 @@ const UserCard = ({user}) => {
     <h2 className="card-title text-gray-800">{firstName + " " + lastName}</h2>
     <p className="text-gray-600">{age} {gender} • {about}</p>
     <div className="card-actions justify-end">
-      <button className="btn btn-primary">Interested</button>
-      <button className="btn btn-primary">Ignored</button>
+      {renderButtons()}
     </div>
   </div>
 </div>
