@@ -11,7 +11,6 @@ const Connections = () => {
 
   useEffect(() => {
     const getConnections = async () => {
-      if (connections.length > 0) return;
       try {
         const res = await axios.get(BASE_URL + "/user/requests/connected", { withCredentials: true });
         dispatch(addConnection(res.data.data));
@@ -21,7 +20,7 @@ const Connections = () => {
       }
     };
     getConnections();
-  }, [connections, dispatch]);
+  }, [dispatch]);
 
   return (
     <div className="p-6">

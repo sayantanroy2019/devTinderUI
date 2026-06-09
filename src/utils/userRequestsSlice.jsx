@@ -5,7 +5,7 @@ const userRequestsSlice = createSlice({
   initialState: [],
   reducers: {
      addRequest: (_, action) => action.payload,
-     removeRequest: () => [],
+     removeRequest: (state, action) => state.filter((request) => request._id !== action.payload),
   },
 });
 
