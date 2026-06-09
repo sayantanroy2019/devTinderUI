@@ -16,22 +16,19 @@ const Feed = () => {
 
 
 
-  const getFeed = async () => {
-    if (feed.length > 0) return;
-
-    try {
-      const res = await axios.get(BASE_URL + "/user/feed", { withCredentials: true });
-      dispatch(addFeed(res.data.users));
-      console.log(res.data.users);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-
-  useEffect(()=>{
+  useEffect(() => {
+    const getFeed = async () => {
+      if (feed.length > 0) return;
+      try {
+        const res = await axios.get(BASE_URL + "/user/feed", { withCredentials: true });
+        dispatch(addFeed(res.data.users));
+        console.log(res.data.users);
+      } catch (err) {
+        console.log(err);
+      }
+    };
     getFeed();
-  },[]);
+  }, [feed, dispatch]);
 
 
 

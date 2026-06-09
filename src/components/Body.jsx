@@ -15,23 +15,21 @@ const Body = () => {
   const navigate = useNavigate();
   const userData = useSelector((store) => store.user);
 
-  const fetchUser = async () => {
-    if (userData) return; // user already in Redux, skip API call
-
-    try{const response = await axios.get(BASE_URL + '/profile/view',{withCredentials: true});
-      dispatch(addUser(response.data));
-  }catch(err){
-    if(err.response?.status === 401){
-      navigate('/login');
-    }
-    console.log(err);
-  }
-
-  }
-
   useEffect(() => {
+    const fetchUser = async () => {
+      if (userData) return;
+      try {
+        const response = await axios.get(BASE_URL + '/profile/view', { withCredentials: true });
+        dispatch(addUser(response.data));
+      } catch (err) {
+        if (err.response?.status === 401) {
+          navigate('/login');
+        }
+        console.log(err);
+      }
+    };
     fetchUser();
-  }, []);
+  }, [userData, dispatch, navigate]);
 
   return (
     <>
