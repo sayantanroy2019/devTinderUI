@@ -11,7 +11,7 @@ const EditProfile = () => {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     age: user?.age || '',
-    gender: user?.gender || '',
+    gender: user?.gender?.toLowerCase() || '',
     about: user?.about || '',
     photoUrl: user?.photoUrl || '',
   }));
@@ -25,16 +25,19 @@ const EditProfile = () => {
     try {
       setError('');
       setSuccess('');
+      const payload = Object.fromEntries(
+        Object.entries(formData).filter(([, v]) => v !== '')
+      );
       const response = await axios.patch(
         BASE_URL + '/profile/edit',
-        formData,
+        payload,
         { withCredentials: true }
       );
-      dispatch(addUser(response.data));
+      dispatch(addUser(response.data.user));
       setSuccess('Profile updated successfully!');
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      setError(err.response?.data || err.message);
     }
   };
 
@@ -105,9 +108,9 @@ const EditProfile = () => {
               onChange={handleChange}
             >
               <option value="">Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="others">Others</option>
             </select>
           </div>
 
